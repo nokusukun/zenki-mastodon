@@ -2,5 +2,6 @@
     "base_url": "https://pawoo.net",
     "app_secret": "zenki.app.secret",
     "user_secret": "zenki.user.secret",
-    "email": "nokusukun@yahoo.co.jp"
+    "email": "********@yahoo.co.jp",
+    "password": "hunter2"
 }
