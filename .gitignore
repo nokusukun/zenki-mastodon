@@ -3,6 +3,11 @@ config.test.json
 config.json
 zenki.app.secret
 zenki.user.secret
+*.jpg
+*.jpeg
+*.mp4
+*.png
+*.gif
 
 # Virtual Enviroment
 Include/

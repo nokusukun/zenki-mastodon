@@ -1,5 +1,5 @@
 import sys, os, shutil, json, threading, queue
-
+import pprint
 LOG_LEVEL = 0
 
 class Console():
@@ -15,7 +15,7 @@ class Console():
   @classmethod
   def log(self, *args, **kwargs):
     if LOG_LEVEL <= 2:
-      print(*args, **kwargs)
+      print('[LOG]', *args, **kwargs)
   
   @classmethod
   def ok(self, *args, **kwargs):
@@ -25,7 +25,7 @@ class Console():
   @classmethod
   def error(self, *args, **kwargs):
     if LOG_LEVEL <= 1:
-      print('[Er]', *args, **kwargs)
+      print('[ERR]', *args, **kwargs)
 
   @classmethod
   def warn(self, *args, **kwargs):
@@ -43,7 +43,9 @@ class Setup():
   def setup(self, **custom):
     self.printLogo()
     Console.log('No configuration found, running setup.')
-    Console.log('---- Inital Stuff ----')
+    Console.log('---- Initial Stuff ----')
+    Console.log('/!\\ run "zenki.py setup" to run the setup again.')
+    Console.log(' Or just edit config.json.')
     # Check python version this is running on
     assert sys.version_info > (3, 5), 'You need Python 3.5 or greater to run this program.'
     Console.ok('Python Version')
@@ -71,7 +73,10 @@ class Setup():
           'folder_if_multiple': custom.get('folder_if_multiple', True),
           'folder_per_user': custom.get('folder_per_user', True),
           'user_folder_format': custom.get('user_folder_format', '{account.id}-{account.acct}'),
-          'media_filename_format': custom.get('media_filename_format', '{media.id}-{raw}.{extension}')
+          'media_filename_format': custom.get('media_filename_format', '{media.id}-{raw}.{extension}'),
+          'queue_size': custom.get('queue_size', 10),
+          'worker_size': custom.get('worker_size', 5),
+          'overwrite_existing': custon.get('overwrite_existing', False)
       }
     }
 
@@ -155,7 +160,8 @@ class Downloader():
       'folder_if_multiple': config.get('folder_if_multiple', True),
       'folder_per_user'   : config.get('folder_per_user', True),
       'user_folder_format': config.get('user_folder_format', '{account.id}-{account.acct}'),
-      'media_filename_format': config.get('media_filename_format', '{media.id}-{raw}.{extension}')
+      'media_filename_format': config.get('media_filename_format', '{media.id}-{raw}.{extension}'),
+      'overwrite_existing': config.get('overwrite_existing', False)
     })
 
     self.workers = [DownloadWorker(x, self.r, self.queue)
@@ -187,7 +193,11 @@ class Downloader():
       path.append(filename)
       file_path = os.path.join(*path)
       
-      Console.testlog('Queueing: ', file_path)
+      if os.path.exists(file_path) and not self.overwrite_existing:
+        Console.log('Skipping:', file_path)
+        continue
+
+      Console.testlog('Saving To: ', file_path)
       self.queue.put((media.url, file_path))
       # response = self.r.get(media.url, stream=True)
       # with open(file_path, 'wb') as out_file:
@@ -253,20 +263,64 @@ class Zenki():
     self.downloader.queue.join()
 
 
+  def downloadFollowing(self, username):
+    # self.mclient.account_verify_credentials()
+    userId = self.resolveUserId(username)
+    following = self.mclient.account_following(userId)
+    while following:
+      for account in following:
+        Console.log('Fetching Following', account.id, account.username)
+        self.downloadTimelineImages(account.id)
+      following = self.mclient.fetch_next(following)
+
+
 class NoUserFound(Exception):
   pass
 
+def printHelp():
+  Setup.printLogo()
+  Console.log("\n".join([
+    '-- Mastodon Download Tool --',
+    'Note: "user" may refer to the mastodon username(@nokusu, nokusu, @nokusu@pawoo.net) or ID(123567).\n',
+    'Usage:',
+    ' Setup',
+    ' -> Run the initial setup process, mastodon requires an account to get full',
+    '    access to the required API features.\n',
+    ' DownloadUserTimeline {user}',
+    ' -> Downloads the media timeline of the specified user.\n',
+    ' DownloadFollowingTimeline {user}',
+    ' -> Downloads the timelines of the accounts the specified user is following.',
+    ]))
+
+def loadZenki(config_path):
+    if not os.path.exists(config_path):
+      Setup.setup(configpath=config_path)
+    return Zenki.loadInstanceFromConfig(config_path)
 
 if __name__ == "__main__":
   config_path = os.path.join(os.path.dirname(sys.argv[0]), 'config.json')
-  if not os.path.exists(config_path):
-    Setup.setup(configpath=config_path)
-    
-  zenki = Zenki.loadInstanceFromConfig(config_path)
   arguments = sys.argv[1:]
-  op = arguments.pop(0)
-  
-  if op == 'downloadtimeline':
-    username = arguments.pop(0)
-    zenki.downloadTimelineImages(username)
+  if not arguments:
+    noargs_file = os.path.join(os.path.dirname(sys.argv[0]), 'noargs')
+    if os.path.exists(noargs_file):
+      with open(noargs_file) as f:
+        Console.log('Running from noargs file')
+        arguments.extend(f.read().split(' '))
+    else:
+      printHelp()
 
+  op = arguments.pop(0)
+
+  if op == 'Help':
+    printHelp()
+  
+  elif op == 'Setup':
+    Setup.setup(configpath=config_path)
+
+  elif op == 'DownloadUserTimeline':
+    username = arguments.pop(0)
+    loadZenki(config_path).downloadTimelineImages(username)
+
+  elif op == 'DownloadFollowingTimeline':
+    username = arguments.pop(0)
+    loadZenki(config_path).downloadFollowing(username)
