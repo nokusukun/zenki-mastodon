@@ -76,7 +76,7 @@ class Setup():
           'media_filename_format': custom.get('media_filename_format', '{media.id}-{raw}.{extension}'),
           'queue_size': custom.get('queue_size', 10),
           'worker_size': custom.get('worker_size', 5),
-          'overwrite_existing': custon.get('overwrite_existing', False)
+          'overwrite_existing': custom.get('overwrite_existing', False)
       }
     }
 
