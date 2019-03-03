@@ -5,14 +5,15 @@
   / /|  __/ | | |   <| |
  /____\___|_| |_|_|\_\_|
 ```
-Mastodon download tool.
+Mastodon media download tool.
+Download images from mastodon instances.
 
 # Requirements
 * Python >3.5
 
 # Setup
-* Download `zenki.py` and place it in a folder. The script will generate some files so a folder on it's own is recommended.
-* Run `zenki.py Setup` to start the setup stuff. This will ask for some details like the instance URL, and email and password.
+* Download `zenki.py` and place it in a folder. The script will generate some files so placing it inside it's own folder is recommended.
+* Run `zenki.py Setup` to start the setup stuff. This will ask for some details like the instance URL, email, and password.
 
 # Commands
 
@@ -36,6 +37,10 @@ Note: "user" may refer to the mastodon username(@nokusu, nokusu, @nokusu@pawoo.n
   ```
   zenki.py DownloadFollowingTimeline @nokusu
   ```
+
+## `DownloadFromFile {filename}`
+  * Downloads the timelines of the users specified in a list.
+  * One user per line.
 
 # Configuration
 ```

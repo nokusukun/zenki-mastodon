@@ -252,7 +252,7 @@ class Zenki():
 
   def downloadTimelineImages(self, username):
     userId = self.resolveUserId(username)
-    Console.log('Downloading Timeline:', userId)
+    Console.log('Downloading Timeline:', username, userId)
     timeline = self.mclient.account_statuses(userId, only_media=True)
     while timeline:
       for status in timeline:
@@ -289,7 +289,9 @@ def printHelp():
     ' DownloadUserTimeline {user}',
     ' -> Downloads the media timeline of the specified user.\n',
     ' DownloadFollowingTimeline {user}',
-    ' -> Downloads the timelines of the accounts the specified user is following.',
+    ' -> Downloads the timelines of the accounts the specified user is following.\n',
+    ' DonwloadFromFile',
+    ' -> Downloads the timelines in a file. One account per line.',
     ]))
 
 def loadZenki(config_path):
@@ -324,3 +326,12 @@ if __name__ == "__main__":
   elif op == 'DownloadFollowingTimeline':
     username = arguments.pop(0)
     loadZenki(config_path).downloadFollowing(username)
+
+  elif op == 'DownloadFromFile':
+    filename = arguments.pop(0)
+    userlist = None
+    with open(filename) as f:
+      userlist = [x.strip() for x in f.readlines() if x.strip()]
+    zenki = loadZenki(config_path)
+    for account in userlist:
+      zenki.downloadTimelineImages(account)
