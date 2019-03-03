@@ -311,7 +311,7 @@ if __name__ == "__main__":
 
   op = arguments.pop(0)
 
-  if op == 'Help':
+  if op.lower() == 'help':
     printHelp()
   
   elif op == 'Setup':
