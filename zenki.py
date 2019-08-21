@@ -1,4 +1,4 @@
-import sys, os, shutil, json, threading, queue
+import sys, os, shutil, json, threading, queue, secrets
 import pprint
 LOG_LEVEL = 0
 
@@ -143,8 +143,15 @@ class DownloadWorker(threading.Thread):
       url, path = self.queue.get()
       Console.log('[ZenkiWorker-{index}] Saving: {url}'.format(index=self.index, url=url))
       response = self.r.get(url, stream=True)
-      with open(path, 'wb') as out_file:
-          shutil.copyfileobj(response.raw, out_file)
+      if not response.ok:
+        Console.error("Failed to download, purged by cloudflare or mastodon: " + url)
+        self.queue.task_done()
+        continue
+      try:
+        with open(path, 'wb') as out_file:
+            shutil.copyfileobj(response.raw, out_file)
+      except Exception as e:
+        Console.error("Failed to save: " + url)
       del response
       self.queue.task_done()
 
@@ -188,7 +195,13 @@ class Downloader():
       path = self.createPath(post)
       url_filename = media.url.split('/')[-1]
       raw_filename = ".".join(url_filename.split('.')[:-1])
+      if raw_filename == "":
+        Console.log("No raw filename found, generating random.")
+        raw_filename = secrets.token_hex(6)
       extension = media.url.split('.')[-1]
+      if len(extension) < 3 and len(extension) > 4:
+        Console.log('Extension is malformed? ' + extension)
+        continue
       filename = self.media_filename_format.format(media=media, raw=raw_filename, extension=extension)
       path.append(filename)
       file_path = os.path.join(*path)
